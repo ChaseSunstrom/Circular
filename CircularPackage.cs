@@ -1,11 +1,12 @@
-﻿using System;
-using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.Shell;
-using Task = System.Threading.Tasks.Task;
-using EnvDTE;
+﻿using EnvDTE;
 using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Threading;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Threading;
+using System;
 
 namespace Circular
 {
@@ -16,6 +17,7 @@ namespace Circular
     {
         private SolutionEventsListener _solutionEventsListener;
         private DTE2 _dte;
+        private IVsOutputWindowPane _outputWindowPane;
 
         public const string PackageGuidString = "6e31c8a6-1a02-48a6-80d7-64fd99a7bc94";
 
@@ -25,7 +27,14 @@ namespace Circular
 
             _dte = await GetServiceAsync(typeof(DTE)) as DTE2;
             var checker = new DependencyChecker();
-            _solutionEventsListener = new SolutionEventsListener(_dte, checker);
+
+            // Initialize the output window pane
+            var outputWindow = await GetServiceAsync(typeof(SVsOutputWindow)) as IVsOutputWindow;
+            var paneGuid = new Guid("0F3B825F-3456-4538-BFA9-9AA9C5A438A7"); // Use a unique GUID
+            outputWindow.CreatePane(ref paneGuid, "Circular Dependency Checker", 1, 1);
+            outputWindow.GetPane(ref paneGuid, out _outputWindowPane);
+
+            _solutionEventsListener = new SolutionEventsListener(_dte, checker, _outputWindowPane);
         }
 
         protected override void Dispose(bool disposing)

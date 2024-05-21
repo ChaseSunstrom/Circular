@@ -67,7 +67,10 @@ namespace Circular
             {
                 if (DetectCyclesHelper(node, graph, visited, stack, new HashSet<string>(), cycles))
                 {
-                    cycles.Add(stack.Reverse().ToList());
+                    // Add the cycle path to the list of cycles
+                    var cycle = stack.Reverse().ToList();
+                    cycle.Add(node); // To complete the cycle path
+                    cycles.Add(cycle);
                 }
             }
 
@@ -78,6 +81,7 @@ namespace Circular
         {
             if (recursionStack.Contains(node))
             {
+                stack.Push(node); // Add node to stack to complete the cycle
                 return true;
             }
 
