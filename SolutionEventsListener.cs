@@ -29,6 +29,7 @@ namespace Circular
         private void OnBuildBegin(vsBuildScope scope, vsBuildAction action)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
+            _errorListProvider.Tasks.Clear();
 
             try
             {
@@ -39,15 +40,14 @@ namespace Circular
             }
             catch (Exception ex)
             {
-                // Add this block to report the error to the Error List window
                 ErrorTask errorTask = new ErrorTask
                 {
                     Text = ex.Message,
                     ErrorCategory = TaskErrorCategory.Error,
-                    Document = "", // Set this to the path of the document where the error occurred
-                    Line = 0, // Set this to the line number where the error occurred
-                    Column = 0, // Set this to the column number where the error occurred
-                    HierarchyItem = null // Set this to the IVsHierarchy of the project where the error occurred
+                    Document = "",
+                    Line = 0,
+                    Column = 0,
+                    HierarchyItem = null
                 };
                 _errorListProvider.Tasks.Add(errorTask);
                 var message = $"Error during circular dependency check: {ex.Message}";
