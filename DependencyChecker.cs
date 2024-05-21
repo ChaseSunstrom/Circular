@@ -30,7 +30,7 @@ namespace Circular
             var graph = new Dictionary<string, List<string>>();
 
             foreach (var file in Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".cpp") || f.EndsWith(".h") || f.EndsWith(".hpp")))
+                .Where(f => f.EndsWith(".cpp") || f.EndsWith(".c") || f.EndsWith(".cc") || f.EndsWith(".h") || f.EndsWith(".hpp") || f.EndsWith(".hh")))
             {
                 var includes = FindIncludes(file);
                 graph[file] = includes;
