@@ -1,4 +1,5 @@
-﻿using EnvDTE;
+﻿
+using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -18,13 +19,15 @@ namespace Circular
         private SolutionEventsListener _solutionEventsListener;
         private DTE2 _dte;
         private IVsOutputWindowPane _outputWindowPane;
-        private IVsTaskList _taskList;
+        private ErrorListProvider _errorListProvider;
 
         public const string PackageGuidString = "6e31c8a6-1a02-48a6-80d7-64fd99a7bc94";
 
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            _errorListProvider = new ErrorListProvider(this);
+
             _dte = await GetServiceAsync(typeof(DTE)) as DTE2;
             var checker = new DependencyChecker();
 
@@ -34,10 +37,7 @@ namespace Circular
             outputWindow.CreatePane(ref paneGuid, "Circular Dependency Checker", 1, 1);
             outputWindow.GetPane(ref paneGuid, out _outputWindowPane);
 
-            // Initialize the task list
-            _taskList = await GetServiceAsync(typeof(SVsTaskList)) as IVsTaskList;
-
-            _solutionEventsListener = new SolutionEventsListener(_dte, checker, _outputWindowPane, _taskList);
+            _solutionEventsListener = new SolutionEventsListener(_dte, checker, _outputWindowPane, _errorListProvider);
         }
 
         protected override void Dispose(bool disposing)
@@ -47,6 +47,13 @@ namespace Circular
                 _solutionEventsListener.Dispose();
                 _solutionEventsListener = null;
             }
+
+            if (_errorListProvider != null)
+            {
+                _errorListProvider.Dispose();
+                _errorListProvider = null;
+            }
+
             base.Dispose(disposing);
         }
     }

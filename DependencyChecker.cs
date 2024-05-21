@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,18 +9,14 @@ namespace Circular
 {
     public class DependencyChecker
     {
-        public List<string> CheckDependencies(string directory)
+        public void CheckDependencies(string directory)
         {
             var circularDeps = FindCircularDependencies(directory);
 
             if (circularDeps.Any())
             {
-                var errorMessages = circularDeps.Select(c => string.Join(" -> ", c)).ToList();
-                var errorMessage = $"Circular dependencies detected:\n{string.Join("\n", errorMessages)}";
-                return errorMessages;
+                throw new InvalidOperationException($"Circular dependencies detected:\n{string.Join("\n", circularDeps.Select(c => string.Join(" -> ", c)))}");
             }
-
-            return new List<string>();
         }
 
         private List<List<string>> FindCircularDependencies(string directory)
@@ -73,7 +70,7 @@ namespace Circular
                 {
                     // Add the cycle path to the list of cycles
                     var cycle = stack.Reverse().ToList();
-                    cycle.Add(cycle.First()); // To complete the cycle path
+                    cycle.Add(node); // To complete the cycle path
                     cycles.Add(cycle);
                 }
             }
