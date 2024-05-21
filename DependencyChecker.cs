@@ -70,7 +70,6 @@ namespace Circular
                 {
                     // Add the cycle path to the list of cycles
                     var cycle = stack.Reverse().ToList();
-                    cycle.Add(node); // To complete the cycle path
                     cycles.Add(cycle);
                 }
             }
