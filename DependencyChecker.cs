@@ -1,4 +1,5 @@
 ﻿
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,14 +29,16 @@ namespace Circular
         private Dictionary<string, List<string>> BuildDependencyGraph(string directory)
         {
             var graph = new Dictionary<string, List<string>>();
+            var ignoredPaths = ReadIgnoredPaths(directory);
 
             foreach (var file in Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".cpp") || f.EndsWith(".c") || f.EndsWith(".cc") || f.EndsWith(".h") || f.EndsWith(".hpp") || f.EndsWith(".hh")))
+                .Select(f => Path.GetFullPath(f))
+                .Where(f => f.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".c", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".cc", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".h", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".hpp", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".hh", StringComparison.OrdinalIgnoreCase))
+                .Where(f => !ignoredPaths.Contains(f)))
             {
                 var includes = FindIncludes(file);
-                graph[file] = includes;
+                graph[file] = includes.Where(i => !ignoredPaths.Contains(Path.GetFullPath(i))).ToList();
             }
-
             return graph;
         }
 
@@ -57,6 +60,42 @@ namespace Circular
         {
             return Path.GetFullPath(Path.Combine(Path.GetDirectoryName(filePath), includePath));
         }
+        private HashSet<string> ReadIgnoredPaths(string directory)
+        {
+            var ignoredPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var ignoreFilePath = Path.Combine(directory, "CircularIgnore.json");
+
+            if (File.Exists(ignoreFilePath))
+            {
+                var ignoreFile = JsonConvert.DeserializeObject<List<string>>(File.ReadAllText(ignoreFilePath));
+                if (ignoreFile != null)
+                {
+                    foreach (var path in ignoreFile)
+                    {
+                        var fullPath = Path.GetFullPath(Path.Combine(directory, path));
+                        if (Directory.Exists(fullPath))
+                        {
+                            // Add all files in the directory and its subdirectories to ignoredPaths
+                            var files = Directory.GetFiles(fullPath, "*", SearchOption.AllDirectories);
+                            foreach (var file in files)
+                            {
+                                ignoredPaths.Add(Path.GetFullPath(file));
+                            }
+                            Console.WriteLine($"Ignored directory: {fullPath}");
+                        }
+                        else
+                        {
+                            // Add the single file to ignoredPaths
+                            ignoredPaths.Add(fullPath);
+                            Console.WriteLine($"Ignored file: {fullPath}");
+                        }
+                    }
+                }
+            }
+
+            return ignoredPaths;
+        }
+
 
         private List<List<string>> DetectCycles(Dictionary<string, List<string>> graph)
         {
@@ -68,7 +107,6 @@ namespace Circular
             {
                 if (DetectCyclesHelper(node, graph, visited, stack, new HashSet<string>(), cycles))
                 {
-                    // Add the cycle path to the list of cycles
                     var cycle = stack.Reverse().ToList();
                     cycles.Add(cycle);
                 }
